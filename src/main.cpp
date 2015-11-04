@@ -80,8 +80,74 @@ bool promptUser(){
 					allCmds.push_back(vec);
 					vec.clear();
 				}
-				
-				//CHECK WHICH ARE EXECUTED...			
+					
+				//TRACK WHICH ARE EXECUTED
+				bool succeeded = 1;
+				//AVAILABLE: begin, ;, &&, ||
+				string current_connector = "begin";		
+	
+				pid_t c_pid, pid;
+				int status;
+			
+				//CONVERT	
+				for(unsigned x = 0; x < allCmds.size(); x++){
+					//Checking to see if this is the first cmd or if this is a cmd following && 
+					//and a previously successful cmd OR if cmd followed by || after a failed cmd
+					//previously OR if cmd is followed by ; which allows immediate execution.
+					if(current_connector = ";" || 
+					   (succeeded && (current_connector = "begin" || current_connector = "&&")) || 
+					   (!succeeded && current_connector = "||")){
+						cmds = new char * [allCmds[x].size() + 1];
+						for(unsigned i = 0; i < allCmds.at(x).size(); i++){
+							cmds[i] = new char[(allCmds[x].size() + 1];
+							copy(allCmds[x].at(i).begin(), allCmds[x].at(i).end(), cmds[i]);
+							cmds[i][allCmds[x].at(i).size()] = '\0';
+						}
+						//APPENT NULL
+						cmds[words.size()] = NULL;
+					
+						//Assume success unless set to fail by execvp
+						succeeded = 1;
+
+						//EXECUTE	
+						pid_t c_pid, pid;
+						int status;
+					
+	        				if( c_pid < 0 ){
+							perror("fork failed");
+							exit(1);
+						}
+						else if (c_pid == 0){
+							if (execvp(cmds[0], cmds) < 0){
+								cout << "EXECVP FAILED\n";
+								succeeded = 0;
+							}
+							perror("Execvp failed");
+						}
+						else if (c_pid > 0){
+							if((pid=wait(&status)) < 0){
+								perror("wait");
+								exit(1);
+							}
+						}
+
+						//Set connector
+						current_connector = allCmds[x][allCmds[x].size() - 1];
+
+						for(unsigned i = 0; i < words.size(); i++){
+							delete[] cmds[i];
+						}	
+						delete[] cmds;
+					}
+					//In this case, the last cmd failed followed by && or
+					//last cmd succeeded followed by a || which means this
+					//cmd has failed = not executed.
+					else{
+						succeeded = 0;
+						//LAST INDEX CARRIES A CONNECTOR
+						current_connector = allCmds[x][allCmds[x].size()-1]; 		
+					} 					
+				}
 			}
 			//========================================
 			//VERSION WHERE THERE ARE NO CONNECTORS...
@@ -107,7 +173,10 @@ bool promptUser(){
 					exit(1);
 				}
 				else if (c_pid == 0){
-					execvp(cmds[0], cmds);
+					if (execvp(cmds[0], cmds) < 0){
+						cout << "EXECVP FAILED\n";
+						exit(1);
+				}
 					perror("Execvp failed");
 				}
 				else if (c_pid > 0){
