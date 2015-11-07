@@ -30,7 +30,7 @@ void print_vec(vector<string>& v){
 
 //Tokenizes a string into passed in vector
 void mystrtok(string& input, vector<string>&all){
-//cout << "I'm currently toking..." << endl;
+    //cout << "I'm currently toking..." << endl;
     //CODE TO LOOK FOR CONNECTORS like ; || && and also comments like #
     //FIRST REMOVE ALL COMMENTS BUT CHECK TO SEE THAT ONE MAY POTENTIALLY EXIST FIRST
     if(input.find('#') != string::npos){
@@ -38,7 +38,7 @@ void mystrtok(string& input, vector<string>&all){
 	    //cuts off the part with sharp to the end;
 	    input = input.substr(0, sharp-1);
     }	
-//cout << "Dont with comments." << endl;	
+    //cout << "Dont with comments." << endl;	
     //CHECKS FOR CONNECTORS AND ADD SPACES IF NECESSARY
     //lko for last known occurence
     unsigned lko = 0;
@@ -58,9 +58,9 @@ void mystrtok(string& input, vector<string>&all){
 	}
 	else
 	    lko+=2; 	
-//cout << input << endl;
-//string yourmother;
-//cin >> yourmother;
+    //cout << input << endl;
+    //string yourmother;
+    //cin >> yourmother;
     }
     lko = 0;
     while(input.find("&&", lko)!= string::npos){
@@ -81,7 +81,7 @@ void mystrtok(string& input, vector<string>&all){
 	    lko+=2; 	
     }	
 		
-//cout << "Done with ||" << endl;
+    //cout << "Done with ||" << endl;
 
     lko = 0;
     while( input.find(";", lko)!= string::npos){
@@ -109,21 +109,21 @@ void mystrtok(string& input, vector<string>&all){
 
 bool promptUser(){
 
-//cout << "prompted user" << endl;
+    //cout << "prompted user" << endl;
     cout << "$ ";
     getline(cin, input);
 
-//cout << "Done getting input" << endl;
+    //cout << "Done getting input" << endl;
     while(input != "quit"){
 	//Holds all commands;
 	vector<string>allCmds;
 	if(input.find_first_not_of(' ')!=string::npos && input!="quit" && input.at(0)!='#'){	
 	    mystrtok(input, allCmds);		
-//////////////TEST
-		print_vec(allCmds);
-/////////////
+	//////////////TEST
+	//		print_vec(allCmds);
+	/////////////
 
-//cout << "Done toking" << endl;
+	//cout << "Done toking" << endl;
 
 	    //PHASE 2: TRACK WHICH ARE EXECUTED
 	    //AVAILABLE: begin, ;, &&, || or unknown
@@ -149,10 +149,12 @@ bool promptUser(){
 	    	//Calc the index of the next connector first to get end of command seq
 	    	for(; c_p < allCmds.size()
 	            && (allCmds[c_p] != ";" && allCmds[c_p] != "&&" && allCmds[c_p] != "||"); c_p++);
-//cout << "What is c_p" << c_p << endl;	
-//cout << "allCmds" << allCmds.size() << endl;
-//cout << "Whats at c_c" << c_c << endl;
-	        unsigned next_inx = 0;	
+		
+		//cout << "What is c_p" << c_p << endl;	
+		//cout << "allCmds" << allCmds.size() << endl;
+		//cout << "Whats at c_c" << c_c << endl;
+	        
+		unsigned next_inx = 0;	
 	        if(init || c_c == ";" || c_c == "end" || (succeeded && c_c == "&&") || (!succeeded && c_c == "||")){    
 		    //Set new connector
 		    if(c_p < allCmds.size())
@@ -176,7 +178,7 @@ bool promptUser(){
 			//strcat(cmds[c_s], "\0");
 			next_inx++; 
 		    }
-//cout << "Got here1"<< endl;
+		    //cout << "Got here1"<< endl;
 		    cmds[next_inx] = NULL; //APPEND NULL
 		    //New c_c value is the c_p we computed earlier in the 2nd for loop above.
 		    if(c_p < allCmds.size()){
@@ -185,13 +187,13 @@ bool promptUser(){
 		        c_p++;
 		        c_s = c_p;
 		    }		
-//cout << "Got here" << endl;
+		    //cout << "Got here" << endl;
 
-	        //PHASE 3: EXECUTION AND TRACK WHICH SUCCEEDED	
+	            //PHASE 3: EXECUTION AND TRACK WHICH SUCCEEDED	
 
 
-////////////////TEST
-		//CODE TO "CONVERT" VECTOR TO POINTER TO A CSTRING ARR
+		    ////////////////TEST
+		    //CODE TO "CONVERT" VECTOR TO POINTER TO A CSTRING ARR
 /*				cmds = new char * [allCmds.size() + 1];
 			
 				for(unsigned i = 0; i < allCmds.size(); i++){
@@ -201,9 +203,9 @@ bool promptUser(){
 				}
 		        	//REMEMBER TO APPEND NULL AT END OF VECTOR
 		        	cmds[allCmds.size()] = NULL;
-//////////////////////////////////////
+		    //////////////////////////////////////
 */
-		//EXECUTE	
+		    //EXECUTE	
 		    pid_t c_pid;
 	   	    int status = 0;
 		    c_pid = fork();
@@ -223,7 +225,7 @@ bool promptUser(){
 		            succeeded = 1;
 	            }
 		    else if (c_pid > 0){
-//cout << "Stuck in limbo" << endl;
+		    //cout << "Stuck in limbo" << endl;
 		        waitpid(-1, &status, 0);
 		    }
 		
@@ -258,62 +260,3 @@ int main(int argc, char * argv[]){
 }
 
 
-	
-		/*
-			//========================================
-			//VERSION WHERE THERE ARE NO CONNECTORS...
-			//========================================
-			else{ 			
-
-				//CODE TO "CONVERT" VECTOR TO POINTER TO A CSTRING ARR
-				cmds = new char * [words.size() + 1];
-			
-				for(unsigned i = 0; i < words.size(); i++){
-					cmds[i] = new char[(words.at(i)).size() + 1];
-			        	copy(words.at(i).begin(), words.at(i).end(), cmds[i]);
-					cmds[i][words.at(i).size()] = '\0';	
-				}
-		        	//REMEMBER TO APPEND NULL AT END OF VECTOR
-		        	cmds[words.size()] = NULL;
-
-				pid_t c_pid, pid;
-				int status;
-				c_pid = fork();
-	        		if( c_pid < 0 ){
-					perror("fork failed");
-					exit(1);
-				}
-				else if (c_pid == 0){
-					if (execvp(cmds[0], cmds) < 0){
-						cout << "EXECVP FAILED\n";
-						exit(1);
-				}
-					perror("Execvp failed");
-				}
-				else if (c_pid > 0){
-					if((pid=wait(&status)) < 0){
-						perror("wait");
-						exit(1);
-					}
-				}
-
-				cout << "The status is: " << status << endl;
-
-				for(unsigned i = 0; i < words.size(); i++){
-					delete[] cmds[i];
-				}	
-				delete[] cmds; 		
-			}
-		*/
-/*    lko = 0;
-    while(input.find("&&", lko)!= string::npos){
-        lko = input.find("&&", lko);
-	//Add space if theres not already a space before
-        if(lko != 0 && input.at(lko-1) != SPACE){
-	    input = input.substr(0, lko) + SPACE + input.substr(lko);
-	    lko+=3;
-	}
-	if(lko != input.size() && input.at(lko) != SPACE)
-	    input = input.substr(0, lko) + SPACE + input.substr(lko);
-    }
-*/	
