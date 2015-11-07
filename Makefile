@@ -1,15 +1,12 @@
-all: rshell
+all: rshell bin
+
+bin:
 	mkdir bin
-	cd src
-	mv rshell ../
-	cd ..
 	mv rshell bin
 
-rshell: main.cp
-	g++ -std=c++0x -Wall -Werror -ansi -pedantic main.cpp -o rshell
+rshell: src/rshell.cpp
+	g++ -std=c++0x -Wall -Werror -ansi -pedantic src/rshell.cpp -o rshell
         	
 clean:
-	cd bin 
-	rm rshell
-	cd ..
+	rm bin/rshell
 	rmdir bin
