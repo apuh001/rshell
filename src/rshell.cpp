@@ -341,30 +341,28 @@ cout << "test detected//////////////////////////////////////////" << endl;
 			if(c_s + 2 < c_p){
 			    if(allCmds[c_s + 1] == "-e"){
 cout << "    DEBUG entered e" << endl;
-				if(stat(allCmds[c_s + 2].c_str(), &sb)==-1){
-				    perror("Stat error");
-				    succeeded = 0;
-				}
-				else if((sb.st_mode & S_IFREG) || (sb.st_mode & S_IFDIR))
+				//if(stat(allCmds[c_s + 2].c_str(), &sb)<0){
+				if(S_ISREG(sb.st_mode) || S_ISDIR(sb.st_mode))
 				    succeeded = 1;
+				else
+				    succeeded = 0;
 			    }
 			    else if(allCmds[c_s + 1] == "-f"){
 cout << "    DEBUG entered f////////////////////////////////////////////" << endl;
-				if(stat(allCmds[c_s + 2].c_str(), &sb)==-1){
-				    perror("Stat error");
-				    succeeded = 0;
-				}
-				else if((sb.st_mode & S_IFREG))
+cout << "    DEBUG what is allCmds at c_s + 2: " << allCmds[c_s + 2] << endl;
+cout << "    DEBUG what is stat: " << stat(allCmds[c_s+2].c_str(), &sb) << endl;
+				if(S_ISREG(sb.st_mode)) 
 				    succeeded = 1;
+				else
+				    succeeded = 0;
 			    }	
 			    else if(allCmds[c_s + 1] == "-d"){
 cout << "    DEBUG entered d" << endl;
-				if(stat(allCmds[c_s + 2].c_str(), &sb)==-1){
-				    perror("Stat error");
-				    succeeded = 0;
-				}
-				else if((sb.st_mode & S_IFDIR))
+				if(S_ISDIR(sb.st_mode)) 
 				    succeeded = 1;
+				else
+				    succeeded = 0;
+
 			    }
 			}
 			//Deafaults to -e
