@@ -5,10 +5,13 @@
  * CS100 - Rshell - rshell.cpp
  */
 
+#include <sys/ioctl.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/types.h>
 #include <sys/wait.h>
 #include <iostream>
 #include <string>
@@ -16,20 +19,84 @@
 #include <boost/tokenizer.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include <dirent.h>
+#include <errno.h>
+#include <algorithm>
+#include <stdio.h>
+#include <fcntl.h>
+#include <pwd.h>
+#include <grp.h>
+#include <time.h>
+
 using namespace std;
 using namespace boost;
+
+//Tracks if user uses test
+bool test_mode = 0;
+string test_flag = "";
 
 char SPACE = ' ';
 string input;
 char ** cmds; 
 
 void print_vec(vector<string>& v){
+    cout << "Printing.... " << endl;
     for(unsigned i = 0; i < v.size(); i++)
-	cout << v[i] << endl;
+	cout << v[i] << " ";
+    cout << endl;
+}
+
+//Use to check if there is an even (modable by 2) 
+//number of quotes, parens, braces, brackets 
+bool all_occur_closed(string in, string s){
+    int occurence = 0;
+    string clos = "";
+
+    if(s == "\""){
+	int cnt = 0;
+	while(in.find(s, occurence) != string::npos){
+	    cnt++;
+	    occurence = in.find(s, occurence) + 1;
+	}
+	if(cnt%2==0)
+	    return true;
+	return false;
+    }
+    else if(s == "["){
+	clos = "]";
+    }
+    else if(s == "{"){
+ 	clos = "}"; 
+    }
+    else if(s == "("){
+	clos = ")";
+    }
+
+    int cnt_op = 0, cnt_ed = 0;
+    while(in.find(s, occurence) != string::npos){
+        cnt_op++;
+	occurence = in.find(s, occurence) + 1;
+    }
+    occurence = 0;
+    while(in.find(clos, occurence) != string::npos){
+	cnt_ed++;
+	occurence = in.find(clos, occurence) + 1;
+    }
+    if(cnt_op == cnt_ed)
+	return 1;
+    return 0; 
 }
 
 //Tokenizes a string into passed in vector
 void mystrtok(string& input, vector<string>&all){
+    //Check for occurences of {, [, (, " that all are closed
+    if(!all_occur_closed(input, "{") || !all_occur_closed(input, "\"") ||
+       !all_occur_closed(input, "[") || !all_occur_closed(input, "(")){
+	cout << "Error: Quotes/Parens/Bracket/Braces not closed." << endl;
+	input = "";
+	return;
+    }	
+
     //cout << "I'm currently toking..." << endl;
     //CODE TO LOOK FOR CONNECTORS like ; || && and also comments like #
     //FIRST REMOVE ALL COMMENTS BUT CHECK TO SEE THAT ONE MAY POTENTIALLY EXIST FIRST
@@ -102,7 +169,11 @@ void mystrtok(string& input, vector<string>&all){
 	else
 	    lko+=1; 	
     }
-    
+   
+
+    //CHECK FOR [ ] AND CONVERT TO TEST
+    //CHECK FOR " ". IF EVEN NUMBER OF " WE GO ON, IF ODD RETURN ERROR
+     
     //Now we can tokenize properly		
     split(all, input, is_any_of(" "), token_compress_on);
 }
@@ -120,7 +191,7 @@ bool promptUser(){
 	if(input.find_first_not_of(' ')!=string::npos && input!="quit" && input.at(0)!='#'){	
 	    mystrtok(input, allCmds);		
 	//////////////TEST
-	//		print_vec(allCmds);
+		print_vec(allCmds);
 	/////////////
 
 	//cout << "Done toking" << endl;
@@ -153,9 +224,19 @@ bool promptUser(){
 		//cout << "What is c_p" << c_p << endl;	
 		//cout << "allCmds" << allCmds.size() << endl;
 		//cout << "Whats at c_c" << c_c << endl;
-	        
+cout << "    DEBUG The first cmd is: " << allCmds[c_s] << endl;
+cout << "    DEBUG What is success: " << succeeded << endl;
+cout << "    DEBUG What is next conn: " << c_c << endl;
+cout << "    DEBUG What is init " << init << endl;
+cout << "    DEBUG " << (!succeeded && c_c == "||") << endl; 
+cout << "    DEBUG What is success and c_c &&:" << (succeeded && c_c == "&&") << endl;
+cout << "    DEBUG if statement evaluates: " << ((init || c_c == ";" || c_c == "end" || (succeeded && c_c == "&&") || 
+		   (!succeeded && c_c == "||")) && allCmds[c_s] != "test") << endl;
+
 		unsigned next_inx = 0;	
-	        if(init || c_c == ";" || c_c == "end" || (succeeded && c_c == "&&") || (!succeeded && c_c == "||")){    
+	        if((init || c_c == ";" || c_c == "end" || (succeeded && c_c == "&&") || 
+		   (!succeeded && c_c == "||")) && allCmds[c_s] != "test"){    
+cout << "    DEBUG WHY ARE WE IN HERE? " << endl; 
 		    //Set new connector
 		    if(c_p < allCmds.size())
 		        c_c = allCmds[c_p];
@@ -235,14 +316,87 @@ bool promptUser(){
 		    }	
 		    //delete[] cmds;	
 	    	}
+		//Implies test was used
+		else if(allCmds[c_s] == "test" ){
+cout << "test detected//////////////////////////////////////////" << endl;
+		    init = 0;
+		    //Set new connector
+		    if(c_p < allCmds.size())
+		        c_c = allCmds[c_p];
+		    else
+		        c_c = "end";
+		   
+		    //Check for flags. Careful about out of index!
+		    //Flags are -e, -f, -d or no flag which evals to -e
+		    //Args can or may not exist. Args can be one string only. Multiple
+		    //Args will output an error and be counted as a failed execution
+
+		    //c_p is the connector and c_s is the start.
+		    //c_s can at most be one before the next connector c_s < c_p
+		    //and c_s + n where n is the size-1 of this cmd sequence 
+		    //must be < size of all Cmd sequences.
+		    if(c_s + 1 < c_p && c_p - c_s <= 3){
+			struct stat sb;
+		
+			if(c_s + 2 < c_p){
+			    if(allCmds[c_s + 1] == "-e"){
+cout << "    DEBUG entered e" << endl;
+				if(stat(allCmds[c_s + 2].c_str(), &sb)==-1){
+				    perror("Stat error");
+				    succeeded = 0;
+				}
+				else if((sb.st_mode & S_IFREG) || (sb.st_mode & S_IFDIR))
+				    succeeded = 1;
+			    }
+			    else if(allCmds[c_s + 1] == "-f"){
+cout << "    DEBUG entered f////////////////////////////////////////////" << endl;
+				if(stat(allCmds[c_s + 2].c_str(), &sb)==-1){
+				    perror("Stat error");
+				    succeeded = 0;
+				}
+				else if((sb.st_mode & S_IFREG))
+				    succeeded = 1;
+			    }	
+			    else if(allCmds[c_s + 1] == "-d"){
+cout << "    DEBUG entered d" << endl;
+				if(stat(allCmds[c_s + 2].c_str(), &sb)==-1){
+				    perror("Stat error");
+				    succeeded = 0;
+				}
+				else if((sb.st_mode & S_IFDIR))
+				    succeeded = 1;
+			    }
+			}
+			//Deafaults to -e
+			else{
+cout << "    DEBUG default e" << endl;
+			    if(stat(allCmds[c_s + 1].c_str(), &sb)==-1){
+				perror("Stat error");
+			 	succeeded = 0;
+			    }
+			    else if((sb.st_mode & S_IFREG) || (sb.st_mode & S_IFDIR)){
+				    succeeded = 1;
+cout << "    DEBUG default e success" << endl;
+
+			    }
+			}
+		    }
+		    else{
+			cout << "Bash: test error." << endl;
+		        succeeded = 0; 
+		    }
+		
+		    c_p++;
+		    c_s = c_p;
+		}
+		//Implies failed cmd combo(eg. SUCCESS || CMD, CMD fails)
 		else{
+		    cout << "Welcome to limbo" << endl << endl;
 		    c_p++;
 		    c_s = c_p;	
-		}
-	    
-        }
-
-
+		    succeeded = 0;
+		} 
+            }
 	}
 	fflush(stdout);
 	//RESET ALL VALUES
