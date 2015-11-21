@@ -31,9 +31,8 @@
 using namespace std;
 using namespace boost;
 
-//Tracks if user uses test
-bool test_mode = 0;
-string test_flag = "";
+//Tracks precedence
+bool has_parens = 0;
 
 char SPACE = ' ';
 string input;
@@ -85,6 +84,25 @@ bool all_occur_closed(string in, string s){
     if(cnt_op == cnt_ed)
 	return 1;
     return 0; 
+}
+
+void bracket_replace_test(vector<string> & v){
+    for(unsigned i = 0; i < v.size(); i++){
+	if(v[i] == "[")
+	    v[i] = "test";
+	if(v[i] == "]")
+	    v[i] = "";	
+    } 
+}
+
+vector<string> vector_retok(vector<string> v){
+    vector<string> vec;
+    for(unsigned i = 0; i < v.size(); i++){
+        if(v[i] != ""){
+	    vec.push_back(v[i]);
+	}
+    }
+    return vec;
 }
 
 //Tokenizes a string into passed in vector
@@ -171,11 +189,56 @@ void mystrtok(string& input, vector<string>&all){
     }
    
 
+    //cleaup parens
+    lko = 0;
+    while( input.find("(", lko) != string::npos){
+        lko = input.find("(", lko);
+	//Add space if theres not already a space before
+        if((lko != 0) && (input.at(lko-1) != SPACE)){
+	    input = input.substr(0, lko) + SPACE + input.substr(lko);
+	    lko+=2;
+	    if(lko < input.size() && lko + 1 < input.size() && input.at(lko) != SPACE){
+	    	input = input.substr(0, lko) + SPACE + input.substr(lko);
+	    	lko++;
+		}	
+	}
+	else if(lko < input.size() && lko+1 < input.size() && input.at(lko+1) != SPACE){
+	    input = input.substr(0, lko+1) + SPACE + input.substr(lko+1);
+	    lko+=2;
+	}
+	else
+	    lko+=1; 	
+    }
+ 
+    lko = 0;
+    while( input.find(")", lko) != string::npos){
+        lko = input.find(")", lko);
+	//Add space if theres not already a space before
+        if((lko != 0) && (input.at(lko-1) != SPACE)){
+	    input = input.substr(0, lko) + SPACE + input.substr(lko);
+	    lko+=2;
+	    if(lko < input.size() && lko + 1 < input.size() && input.at(lko) != SPACE){
+	    	input = input.substr(0, lko) + SPACE + input.substr(lko);
+	    	lko++;
+		}	
+	}
+	else if(lko < input.size() && lko+1 < input.size() && input.at(lko+1) != SPACE){
+	    input = input.substr(0, lko+1) + SPACE + input.substr(lko+1);
+	    lko+=2;
+	}
+	else
+	    lko+=1; 	
+    }
+
     //CHECK FOR [ ] AND CONVERT TO TEST
     //CHECK FOR " ". IF EVEN NUMBER OF " WE GO ON, IF ODD RETURN ERROR
      
     //Now we can tokenize properly		
     split(all, input, is_any_of(" "), token_compress_on);
+    bracket_replace_test(all);
+    all = vector_retok(all);
+
+    //RETOKENIZE      
 }
 
 bool promptUser(){
@@ -191,7 +254,7 @@ bool promptUser(){
 	if(input.find_first_not_of(' ')!=string::npos && input!="quit" && input.at(0)!='#'){	
 	    mystrtok(input, allCmds);		
 	//////////////TEST
-		print_vec(allCmds);
+	//		print_vec(allCmds);
 	/////////////
 
 	//cout << "Done toking" << endl;
@@ -217,26 +280,30 @@ bool promptUser(){
 	    unsigned sz;
 
 	    while(c_p < allCmds.size()){
-	    	//Calc the index of the next connector first to get end of command seq
-	    	for(; c_p < allCmds.size()
-	            && (allCmds[c_p] != ";" && allCmds[c_p] != "&&" && allCmds[c_p] != "||"); c_p++);
-		
+		    //Calc the index of the next connector first to get end of command seq
+		    for(; c_p < allCmds.size()
+	                && (allCmds[c_p] != ";" && allCmds[c_p] != "&&" && allCmds[c_p] != "||"
+		        && allCmds[c_p] != "(" && allCmds[c_p] != ")"); c_p++);
+	
 		//cout << "What is c_p" << c_p << endl;	
 		//cout << "allCmds" << allCmds.size() << endl;
 		//cout << "Whats at c_c" << c_c << endl;
-cout << "    DEBUG The first cmd is: " << allCmds[c_s] << endl;
-cout << "    DEBUG What is success: " << succeeded << endl;
-cout << "    DEBUG What is next conn: " << c_c << endl;
-cout << "    DEBUG What is init " << init << endl;
-cout << "    DEBUG " << (!succeeded && c_c == "||") << endl; 
-cout << "    DEBUG What is success and c_c &&:" << (succeeded && c_c == "&&") << endl;
-cout << "    DEBUG if statement evaluates: " << ((init || c_c == ";" || c_c == "end" || (succeeded && c_c == "&&") || 
-		   (!succeeded && c_c == "||")) && allCmds[c_s] != "test") << endl;
+
+		//cout << "    DEBUG The first cmd is: " << allCmds[c_s] << endl;
+		//cout << "    DEBUG What is success: " << succeeded << endl;
+		//cout << "    DEBUG What is next conn: " << c_c << endl;
+		//cout << "    DEBUG What is init " << init << endl;
+		//cout << "    DEBUG " << (!succeeded && c_c == "||") << endl; 
+		//cout << "    DEBUG What is success and c_c &&:" << (succeeded && c_c == "&&") << endl;
+		//cout << "    DEBUG if statement evaluates: " << ((init || c_c == ";" || c_c == "end" || (succeeded && c_c == "&&") || 
+		// (!succeeded && c_c == "||")) && allCmds[c_s] != "test") << endl;
 
 		unsigned next_inx = 0;	
 	        if((init || c_c == ";" || c_c == "end" || (succeeded && c_c == "&&") || 
 		   (!succeeded && c_c == "||")) && allCmds[c_s] != "test"){    
-cout << "    DEBUG WHY ARE WE IN HERE? " << endl; 
+
+		//cout << "    DEBUG WHY ARE WE IN HERE? " << endl; 
+		  
 		    //Set new connector
 		    if(c_p < allCmds.size())
 		        c_c = allCmds[c_p];
@@ -318,7 +385,9 @@ cout << "    DEBUG WHY ARE WE IN HERE? " << endl;
 	    	}
 		//Implies test was used
 		else if(allCmds[c_s] == "test" ){
-cout << "test detected//////////////////////////////////////////" << endl;
+	        
+  	        //cout << "test detected//////////////////////////////////////////" << endl;
+
 		    init = 0;
 		    //Set new connector
 		    if(c_p < allCmds.size())
@@ -340,7 +409,9 @@ cout << "test detected//////////////////////////////////////////" << endl;
 		
 			if(c_s + 2 < c_p){
 			    if(allCmds[c_s + 1] == "-e"){
-cout << "    DEBUG entered e" << endl;
+
+			//cout << "    DEBUG entered e" << endl;
+
 				//if(stat(allCmds[c_s + 2].c_str(), &sb)<0){
 				if(S_ISREG(sb.st_mode) || S_ISDIR(sb.st_mode))
 				    succeeded = 1;
@@ -348,16 +419,20 @@ cout << "    DEBUG entered e" << endl;
 				    succeeded = 0;
 			    }
 			    else if(allCmds[c_s + 1] == "-f"){
-cout << "    DEBUG entered f////////////////////////////////////////////" << endl;
-cout << "    DEBUG what is allCmds at c_s + 2: " << allCmds[c_s + 2] << endl;
-cout << "    DEBUG what is stat: " << stat(allCmds[c_s+2].c_str(), &sb) << endl;
+
+			//cout << "    DEBUG entered f////////////////////////////////////////////" << endl;
+			//cout << "    DEBUG what is allCmds at c_s + 2: " << allCmds[c_s + 2] << endl;
+			//cout << "    DEBUG what is stat: " << stat(allCmds[c_s+2].c_str(), &sb) << endl;
+
 				if(S_ISREG(sb.st_mode)) 
 				    succeeded = 1;
 				else
 				    succeeded = 0;
 			    }	
 			    else if(allCmds[c_s + 1] == "-d"){
-cout << "    DEBUG entered d" << endl;
+
+			//cout << "    DEBUG entered d" << endl;
+
 				if(S_ISDIR(sb.st_mode)) 
 				    succeeded = 1;
 				else
@@ -367,14 +442,17 @@ cout << "    DEBUG entered d" << endl;
 			}
 			//Deafaults to -e
 			else{
-cout << "    DEBUG default e" << endl;
+			
+			//cout << "    DEBUG default e" << endl;
+
 			    if(stat(allCmds[c_s + 1].c_str(), &sb)==-1){
 				perror("Stat error");
 			 	succeeded = 0;
 			    }
 			    else if((sb.st_mode & S_IFREG) || (sb.st_mode & S_IFDIR)){
 				    succeeded = 1;
-cout << "    DEBUG default e success" << endl;
+			
+			//cout << "    DEBUG default e success" << endl;
 
 			    }
 			}
@@ -389,7 +467,7 @@ cout << "    DEBUG default e success" << endl;
 		}
 		//Implies failed cmd combo(eg. SUCCESS || CMD, CMD fails)
 		else{
-		    cout << "Welcome to limbo" << endl << endl;
+		    //cout << "Welcome to limbo" << endl << endl;
 		    c_p++;
 		    c_s = c_p;	
 		    succeeded = 0;
@@ -410,5 +488,3 @@ int main(int argc, char * argv[]){
 	while(promptUser());
 	return 0;
 }
-
-
