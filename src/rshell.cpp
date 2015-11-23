@@ -6,6 +6,7 @@
  */
 
 #include <sys/ioctl.h>
+//#include <Timer.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -412,7 +413,7 @@ bool promptUser(){
 
 			//cout << "    DEBUG entered e" << endl;
 
-				//if(stat(allCmds[c_s + 2].c_str(), &sb)<0){
+				stat(allCmds[c_s + 2].c_str(), &sb);
 				if(S_ISREG(sb.st_mode) || S_ISDIR(sb.st_mode))
 				    succeeded = 1;
 				else
@@ -423,6 +424,7 @@ bool promptUser(){
 			//cout << "    DEBUG entered f////////////////////////////////////////////" << endl;
 			//cout << "    DEBUG what is allCmds at c_s + 2: " << allCmds[c_s + 2] << endl;
 			//cout << "    DEBUG what is stat: " << stat(allCmds[c_s+2].c_str(), &sb) << endl;
+stat(allCmds[c_s + 2].c_str(), &sb);
 
 				if(S_ISREG(sb.st_mode)) 
 				    succeeded = 1;
@@ -430,7 +432,7 @@ bool promptUser(){
 				    succeeded = 0;
 			    }	
 			    else if(allCmds[c_s + 1] == "-d"){
-
+stat(allCmds[c_s + 2].c_str(), &sb);
 			//cout << "    DEBUG entered d" << endl;
 
 				if(S_ISDIR(sb.st_mode)) 
